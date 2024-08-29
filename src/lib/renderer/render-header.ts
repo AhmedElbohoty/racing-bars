@@ -1,7 +1,14 @@
 import * as d3 from '../d3';
 
 import type { Data } from '../data';
-import type { Store } from '../store';
+import {
+  selectDataGroupFilter,
+  selectDataGroups,
+  selectOptions,
+  selectTickCurrentDate,
+  selectTickDates,
+  type Store,
+} from '../store';
 import { getText, getColor } from '../utils';
 import type { RenderOptions } from './render-options';
 import { legendClick } from './helpers';
@@ -11,10 +18,11 @@ export function renderHeader(
   renderOptions: RenderOptions,
   CompleteDateSlice: Data[],
 ) {
-  const groups = store.getState().data.groups;
-  const dates = store.getState().ticker.dates;
-  const currentDate = store.getState().ticker.currentDate;
-  const { title, subTitle, marginTop, marginLeft, showGroups } = store.getState().options;
+  const storeState = store.getState();
+  const groups = selectDataGroups(storeState);
+  const dates = selectTickDates(storeState);
+  const currentDate = selectTickCurrentDate(storeState);
+  const { title, subTitle, marginTop, marginLeft, showGroups } = selectOptions(storeState);
   const { svg, margin, width, titlePadding, titleHeight } = renderOptions;
 
   renderOptions.titleText = svg
@@ -40,7 +48,9 @@ export function renderHeader(
       .append('g')
       .attr('class', 'legend legend-wrapper')
       .style('cursor', 'pointer')
-      .style('opacity', (d: string) => (store.getState().data.groupFilter.includes(d) ? 0.3 : 1))
+      .style('opacity', (d: string) =>
+        selectDataGroupFilter(store.getState()).includes(d) ? 0.3 : 1,
+      )
       .on('click', (ev: PointerEvent, d: string) => legendClick(ev, d, store));
 
     legends

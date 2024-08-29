@@ -1,5 +1,5 @@
 import type { Data } from '../data';
-import type { Store } from '../store';
+import { selectOptions, type Store } from '../store';
 import { getHeight, getWidth } from '../utils';
 import type { RenderOptions } from './render-options';
 import { renderInitialView } from './render-initial-view';
@@ -7,7 +7,7 @@ import { renderFrame } from './render-frame';
 import { updateControls } from './controls';
 
 export function resize(data: Data[], store: Store, renderOptions: RenderOptions) {
-  const { inputHeight, inputWidth, minHeight, minWidth } = store.getState().options;
+  const { inputHeight, inputWidth, minHeight, minWidth } = selectOptions(store.getState());
   const { root } = renderOptions;
 
   if (!root) return;

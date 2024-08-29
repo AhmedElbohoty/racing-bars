@@ -1,6 +1,14 @@
 import type { Data, WideData } from '../data';
 import type { Options } from '../options';
-import { actions, type Store } from '../store';
+import {
+  actions,
+  selectDataDateSlices,
+  selectDataGroupFilter,
+  selectOptFixedOrder,
+  selectOptions,
+  selectTicker,
+  type Store,
+} from '../store';
 import { loadData } from '../load-data';
 // @ts-ignore
 // eslint-disable-next-line import/no-internal-modules
@@ -15,7 +23,8 @@ export async function prepareData(
   store: Store,
   changingOptions = false,
 ): Promise<Data[]> {
-  const { dataTransform, dataType } = store.getState().options;
+  const options = selectOptions(store.getState());
+  const { dataTransform, dataType } = options;
   if (typeof dataTransform === 'function') {
     if (typeof data === 'string') {
       data = await loadData(data, dataType);
@@ -25,7 +34,7 @@ export async function prepareData(
   worker.postMessage({
     type: 'prepare-data',
     data,
-    options: removeFnOptions(store.getState().options),
+    options: removeFnOptions(options),
   });
   const preparedData = await new Promise<Data[]>((resolve) => {
     worker.addEventListener(
@@ -69,9 +78,11 @@ function storeDataCollections(data: Data[], store: Store, changingOptions: boole
 
 export function getDateSlice(date: string, data: Data[], store: Store) {
   let dateSlice: Data[];
-  if (store.getState().data.dateSlices[date]) {
+
+  const dateSlices = selectDataDateSlices(store.getState());
+  if (dateSlices[date]) {
     // use cache
-    dateSlice = store.getState().data.dateSlices[date];
+    dateSlice = dateSlices[date];
   } else {
     const slice = data
       .filter((d) => d.date === date && !isNaN(d.value))
@@ -83,30 +94,28 @@ export function getDateSlice(date: string, data: Data[], store: Store) {
     // save to cache
     store.dispatch(actions.data.addDateSlice(date, dateSlice));
   }
-  const groupFilter = store.getState().data.groupFilter;
+  const groupFilter = selectDataGroupFilter(store.getState());
   return groupFilter.length > 0 ? filterGroups(dateSlice, store) : dateSlice;
 }
 
 function filterGroups(data: Data[], store: Store) {
-  const groupFilter = store.getState().data.groupFilter;
+  const groupFilter = selectDataGroupFilter(store.getState());
   return data
     .filter((d) => (!!d.group ? !groupFilter.includes(d.group) : true))
     .map((d, i) => ({ ...d, rank: getRank(d, i, store) }));
 }
 
 export function computeNextDateSubscriber(data: Data[], store: Store) {
+  const { isRunning, dates, currentDate } = selectTicker(store.getState());
   return function () {
-    if (store.getState().ticker.isRunning) {
-      const nextDate = getNextDate(
-        store.getState().ticker.dates,
-        store.getState().ticker.currentDate,
-      );
+    if (isRunning) {
+      const nextDate = getNextDate(dates, currentDate);
       getDateSlice(nextDate, data, store);
     }
   };
 }
 
 function getRank(d: Data, i: number, store: Store) {
-  const fixedOrder = store.getState().options.fixedOrder;
+  const fixedOrder = selectOptFixedOrder(store.getState());
   return fixedOrder.length > 0 ? d.rank : i;
 }

@@ -1,5 +1,5 @@
 import type { Data } from '../data';
-import { actions, type Store } from '../store';
+import { actions, selectOptHighlightBars, selectOptSelectBars, type Store } from '../store';
 import { safeName, toggleClass, getClicks } from '../utils';
 import type { RenderOptions } from './render-options';
 
@@ -29,13 +29,13 @@ export function legendClick(ev: MouseEvent, d: string, store: Store) {
 }
 
 export function highlightFn(d: Data, store: Store, renderOptions: RenderOptions) {
-  if (store.getState().options.highlightBars) {
+  if (selectOptHighlightBars(store.getState())) {
     toggleClass(renderOptions.root, 'rect.' + safeName(d.name), 'highlight');
   }
 }
 
 export function selectFn(d: Data, store: Store, renderOptions: RenderOptions) {
-  if (store.getState().options.selectBars) {
+  if (selectOptSelectBars(store.getState())) {
     toggleClass(renderOptions.root, 'rect.' + safeName(d.name), 'selected');
     store.dispatch(actions.data.toggleSelection(d.name));
   }

@@ -1,11 +1,20 @@
 import { elements } from '../renderer';
-import type { Store } from '../store';
+import {
+  selectContElement,
+  selectOptKeyboardControls,
+  selectOptMouseControls,
+  selectTickCurrentDate,
+  selectTickIsFirstDate,
+  selectTickIsLastDate,
+  selectTickIsRunning,
+  type Store,
+} from '../store';
 import type { Ticker } from '../ticker';
 import { hideElement, getElement, getClicks } from '../utils';
 import type { DOMCustomEvent, EventType, Event, TickDetails } from './models';
 
 export function registerEvents(store: Store, ticker: Ticker) {
-  const root = store.getState().container.element;
+  const root = selectContElement(store.getState());
   const events: Event[] = [];
   register();
 
@@ -43,7 +52,8 @@ export function registerEvents(store: Store, ticker: Ticker) {
   }
 
   function registerClickEvents() {
-    if (store.getState().options.mouseControls) {
+    const mouseControls = selectOptMouseControls(store.getState());
+    if (mouseControls) {
       const svg = root.querySelector('svg') as SVGSVGElement;
       svg.addEventListener('click', (clickEvent) => {
         // ignore clicks to group legends
@@ -65,7 +75,7 @@ export function registerEvents(store: Store, ticker: Ticker) {
   }
 
   function registerKeyboardEvents() {
-    if (store.getState().options.keyboardControls) {
+    if (selectOptKeyboardControls(store.getState())) {
       addEventHandler(document, '', 'keyup', handleKeyboardEvents);
     }
   }
@@ -154,7 +164,7 @@ export function getTickDetails(store: Store): TickDetails {
 }
 
 function dispatchDOMEvent(store: Store, eventType: EventType) {
-  const element = store.getState().container.element;
+  const element = selectContElement(store.getState());
   if (!element) return;
   element.dispatchEvent(
     new CustomEvent(eventType, {
@@ -168,14 +178,18 @@ export function DOMEventSubscriber(store: Store) {
   let lastDate = '';
   let wasRunning: boolean;
   return function () {
-    const currentDate = store.getState().ticker.currentDate;
-    const isRunning = store.getState().ticker.isRunning;
+    const storeState = store.getState();
+    const currentDate = selectTickCurrentDate(storeState);
+    const isRunning = selectTickIsRunning(storeState);
+    const isFirstDate = selectTickIsFirstDate(storeState);
+    const isLastDate = selectTickIsLastDate(storeState);
+
     if (currentDate !== lastDate) {
       dispatchDOMEvent(store, 'dateChange');
-      if (store.getState().ticker.isFirstDate) {
+      if (isFirstDate) {
         dispatchDOMEvent(store, 'firstDate');
       }
-      if (store.getState().ticker.isLastDate) {
+      if (isLastDate) {
         dispatchDOMEvent(store, 'lastDate');
       }
       lastDate = currentDate;

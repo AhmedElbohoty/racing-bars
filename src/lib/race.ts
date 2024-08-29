@@ -4,7 +4,17 @@ import type { Data, WideData } from './data';
 import { createRenderer, rendererSubscriber, type Renderer } from './renderer';
 import { createTicker } from './ticker';
 import { styleInject } from './styles';
-import { actions, createStore, rootReducer, type Store } from './store';
+import {
+  actions,
+  createStore,
+  rootReducer,
+  selectOptions,
+  selectTickIsRunning,
+  selectTickDates,
+  selectTickCurrentDate,
+  selectTickIsFirstDate,
+  type Store,
+} from './store';
 import type { Options } from './options';
 import { registerEvents, DOMEventSubscriber, getTickDetails, type EventType } from './events';
 import type { Race, ApiCallback } from './models';
@@ -41,7 +51,8 @@ export async function race(
   let preparedData = await prepareData(data, store);
   let renderer = createRenderer(preparedData, store, root);
 
-  const { injectStyles, theme, autorun } = store.getState().options;
+  const storeState = store.getState();
+  const { injectStyles, theme, autorun } = selectOptions(storeState);
 
   const apiSubscriptions: Array<() => void> = [];
   subscribeToStore(store, renderer, preparedData);
@@ -88,7 +99,7 @@ export async function race(
   const API = {
     // TODO: validate user input
     play() {
-      if (!store.getState().ticker.isRunning) {
+      if (!selectTickIsRunning(store.getState())) {
         ticker.start();
       }
     },
@@ -114,13 +125,13 @@ export async function race(
       store.dispatch(actions.ticker.updateDate(getDateString(inputDate)));
     },
     getDate() {
-      return store.getState().ticker.currentDate;
+      return selectTickCurrentDate(store.getState());
     },
     getAllDates() {
-      return [...store.getState().ticker.dates];
+      return [...selectTickDates(store.getState())];
     },
     isRunning() {
-      return store.getState().ticker.isRunning;
+      return selectTickIsRunning(store.getState());
     },
     select(name: string) {
       d3.select(root)
@@ -153,7 +164,8 @@ export async function race(
     async changeOptions(newOptions: Partial<Options>) {
       const unAllowedOptions: Array<keyof Options> = ['dataShape', 'dataType'];
       unAllowedOptions.forEach((key) => {
-        if (newOptions[key] && newOptions[key] !== store.getState().options[key]) {
+        const options = selectOptions(store.getState());
+        if (newOptions[key] && newOptions[key] !== options[key]) {
           throw new Error(`The option "${key}" cannot be changed.`);
         }
       });
@@ -168,13 +180,14 @@ export async function race(
       ];
       let dataOptionsChanged = false;
       dataOptions.forEach((key) => {
-        if (newOptions[key] && newOptions[key] !== store.getState().options[key]) {
+        const options = selectOptions(store.getState());
+        if (newOptions[key] && newOptions[key] !== options[key]) {
           dataOptionsChanged = true;
         }
       });
 
       store.dispatch(actions.options.changeOptions(newOptions));
-      const { injectStyles, theme, autorun } = store.getState().options;
+      const { injectStyles, theme, autorun } = selectOptions(store.getState());
 
       if (dataOptionsChanged) {
         store.unsubscribeAll();
@@ -195,7 +208,9 @@ export async function race(
       events.reregister();
 
       if (autorun) {
-        const { isFirstDate, isRunning } = store.getState().ticker;
+        const state = store.getState();
+        const isRunning = selectTickIsRunning(state);
+        const isFirstDate = selectTickIsFirstDate(state);
         if (isFirstDate && !isRunning) {
           ticker.start();
         }
@@ -205,11 +220,12 @@ export async function race(
       const dateString = getDateString(date);
       let lastDate = '';
       const watcher = addApiSubscription(() => {
-        if (store.getState().ticker.currentDate === dateString && dateString !== lastDate) {
-          lastDate = store.getState().ticker.currentDate; // avoid infinite loop if fn dispatches action
+        const currentDate = selectTickCurrentDate(store.getState());
+        if (currentDate === dateString && dateString !== lastDate) {
+          lastDate = currentDate; // avoid infinite loop if fn dispatches action
           fn.call(API, getTickDetails(store));
         }
-        lastDate = store.getState().ticker.currentDate;
+        lastDate = currentDate;
       });
       return {
         remove() {

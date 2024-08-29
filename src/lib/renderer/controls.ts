@@ -1,13 +1,19 @@
 import * as d3 from '../d3';
 
-import type { Store } from '../store';
+import {
+  selectOptions,
+  selectTickIsFirstDate,
+  selectTickIsLastDate,
+  selectTickIsRunning,
+  type Store,
+} from '../store';
 import { hideElement, showElement } from '../utils';
 import { elements } from './elements';
 import { buttons } from './buttons';
 import type { RenderOptions } from './render-options';
 
 export function renderControls(store: Store, renderOptions: RenderOptions) {
-  const { marginTop, controlButtons } = store.getState().options;
+  const { marginTop, controlButtons } = selectOptions(store.getState());
   const { root, width, margin, barPadding } = renderOptions;
 
   const elementWidth = root.getBoundingClientRect().width;
@@ -41,10 +47,15 @@ export function renderControls(store: Store, renderOptions: RenderOptions) {
 }
 
 export function updateControls(store: Store, renderOptions: RenderOptions) {
-  const { overlays, loop } = store.getState().options;
+  const storeState = store.getState();
+  const isRunning = selectTickIsRunning(storeState);
+  const isFirstDate = selectTickIsFirstDate(storeState);
+  const isLastDate = selectTickIsLastDate(storeState);
+
+  const { overlays, loop } = selectOptions(storeState);
   const { root } = renderOptions;
 
-  if (store.getState().ticker.isRunning) {
+  if (isRunning) {
     showElement(root, elements.pause);
     hideElement(root, elements.play);
   } else {
@@ -52,20 +63,12 @@ export function updateControls(store: Store, renderOptions: RenderOptions) {
     hideElement(root, elements.pause);
   }
 
-  if (
-    store.getState().ticker.isFirstDate &&
-    (overlays === 'all' || overlays === 'play') &&
-    !store.getState().ticker.isRunning
-  ) {
+  if (isFirstDate && (overlays === 'all' || overlays === 'play') && !isRunning) {
     hideElement(root, elements.controls, true);
     showElement(root, elements.overlay);
     showElement(root, elements.overlayPlay);
     hideElement(root, elements.overlayRepeat);
-  } else if (
-    store.getState().ticker.isLastDate &&
-    (overlays === 'all' || overlays === 'repeat') &&
-    !(loop && store.getState().ticker.isRunning)
-  ) {
+  } else if (isLastDate && (overlays === 'all' || overlays === 'repeat') && !(loop && isRunning)) {
     hideElement(root, elements.controls, true);
     showElement(root, elements.overlay);
     showElement(root, elements.overlayRepeat);
@@ -77,7 +80,7 @@ export function updateControls(store: Store, renderOptions: RenderOptions) {
 }
 
 export function renderOverlays(store: Store, renderOptions: RenderOptions) {
-  const { minHeight, minWidth } = store.getState().options;
+  const { minHeight, minWidth } = selectOptions(store.getState());
   const { root } = renderOptions;
 
   const overlayButtonIcons = [

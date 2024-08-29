@@ -1,7 +1,7 @@
 import * as d3 from '../d3';
 
 import type { Data } from '../data';
-import type { Store } from '../store';
+import { selectOptions, type Store } from '../store';
 import { getHeight, getWidth } from '../utils';
 import type { RenderOptions } from './render-options';
 
@@ -23,10 +23,11 @@ export function calculateDimensions(store: Store, renderOptions: RenderOptions) 
     labelsWidth,
     showIcons,
     fixedOrder,
-  } = store.getState().options;
+    topN: topNOpt,
+  } = selectOptions(store.getState());
   const { root, maxValue } = renderOptions;
 
-  const topN = fixedOrder.length > 0 ? fixedOrder.length : store.getState().options.topN;
+  const topN = fixedOrder.length > 0 ? fixedOrder.length : topNOpt;
 
   const height = (renderOptions.height = getHeight(root, minHeight, String(inputHeight)));
   const width = (renderOptions.width = getWidth(root, minWidth, String(inputWidth)));

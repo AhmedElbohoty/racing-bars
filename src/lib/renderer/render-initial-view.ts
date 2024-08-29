@@ -1,6 +1,12 @@
 import * as d3 from '../d3';
 
-import type { Store } from '../store';
+import {
+  selectDataSelected,
+  selectOptions,
+  selectTickCurrentDate,
+  selectTickDates,
+  type Store,
+} from '../store';
 import type { Data } from '../data';
 import { getDateSlice, getText, getColor, safeName, getIconID } from '../utils';
 import type { RenderOptions } from './render-options';
@@ -10,13 +16,21 @@ import { renderControls, renderOverlays, updateControls } from './controls';
 import { selectFn, highlightFn, halo } from './helpers';
 
 export function renderInitialView(data: Data[], store: Store, renderOptions: RenderOptions) {
-  const { caption, dateCounter, labelsPosition, showIcons, fixedScale, fixedOrder } =
-    store.getState().options;
+  const storeState = store.getState();
+  const {
+    caption,
+    dateCounter,
+    labelsPosition,
+    showIcons,
+    fixedScale,
+    fixedOrder,
+    topN: topNOpt,
+  } = selectOptions(storeState);
 
-  const dates = store.getState().ticker.dates;
+  const dates = selectTickDates(storeState);
   const root = renderOptions.root;
-  const topN = fixedOrder.length > 0 ? fixedOrder.length : store.getState().options.topN;
-  const currentDate = store.getState().ticker.currentDate;
+  const topN = fixedOrder.length > 0 ? fixedOrder.length : topNOpt;
+  const currentDate = selectTickCurrentDate(storeState);
   const CompleteDateSlice = getDateSlice(currentDate, data, store);
   const dateSlice = CompleteDateSlice.slice(0, topN);
   const lastDateIndex = dates.indexOf(currentDate) > 0 ? dates.indexOf(currentDate) - 1 : 0;
@@ -81,7 +95,7 @@ export function renderInitialView(data: Data[], store: Store, renderOptions: Ren
       .enter()
       .append('rect')
       .attr('class', (d: Data) => 'bar ' + safeName(d.name))
-      .classed('selected', (d: Data) => store.getState().data.selected.includes(d.name))
+      .classed('selected', (d: Data) => selectDataSelected(store.getState()).includes(d.name))
       .attr('x', x(0) + 1)
       .attr('width', barWidth)
       .attr('y', barY)

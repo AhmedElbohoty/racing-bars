@@ -1,10 +1,11 @@
-import type { /* actions, */ Store } from './store';
+import { selectContElement, selectTickDates, type Store } from './store';
 
 export function createScroller(store: Store) {
-  const root = store.getState().container.element;
+  const storeState = store.getState();
+  const root = selectContElement(storeState);
   if (!root) return;
 
-  const dates = store.getState().ticker.dates;
+  const dates = selectTickDates(storeState);
   prepareDOM();
 
   const step = document.body.clientHeight / dates.length;

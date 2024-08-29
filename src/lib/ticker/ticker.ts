@@ -1,5 +1,12 @@
 import * as d3 from '../d3';
-import { actions, type Store } from '../store';
+import {
+  actions,
+  selectOptLoop,
+  selectOptTickDuration,
+  selectTickIsLastDate,
+  selectTickIsRunning,
+  type Store,
+} from '../store';
 import type { Ticker } from './ticker.models';
 
 export function createTicker(store: Store): Ticker {
@@ -7,14 +14,16 @@ export function createTicker(store: Store): Ticker {
 
   function start() {
     let justStarted = true;
-    ticker = d3.interval(showRace, store.getState().options.tickDuration);
+    const tickDuration = selectOptTickDuration(store.getState());
+    const isLastDate = selectTickIsLastDate(store.getState());
+    ticker = d3.interval(showRace, tickDuration);
     store.dispatch(actions.ticker.setRunning(true));
 
     function showRace(_: number) {
-      if (!store.getState().ticker.isLastDate) {
+      if (!isLastDate) {
         store.dispatch(actions.ticker.inc());
       } else {
-        if (store.getState().options.loop || justStarted) {
+        if (selectOptLoop(store.getState()) || justStarted) {
           loop();
         } else {
           stop();
@@ -47,10 +56,13 @@ export function createTicker(store: Store): Ticker {
   }
 
   function toggle() {
-    if (store.getState().ticker.isLastDate) {
+    const isLastDate = selectTickIsLastDate(store.getState());
+    const isRunning = selectTickIsRunning(store.getState());
+
+    if (isLastDate) {
       skipBack();
       start();
-    } else if (store.getState().ticker.isRunning) {
+    } else if (isRunning) {
       stop();
     } else {
       start();

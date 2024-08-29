@@ -1,7 +1,16 @@
 import * as d3 from '../d3';
 
 import type { Data } from '../data';
-import type { Store } from '../store';
+import {
+  selectDataGroupFilter,
+  selectDataSelected,
+  selectOptShowGroups,
+  selectOptShowIcons,
+  selectOptions,
+  selectTickCurrentDate,
+  selectTickDates,
+  type Store,
+} from '../store';
 import { getDateSlice, safeName, getColor, getIconID, getText } from '../utils';
 import type { RenderOptions } from './render-options';
 import { selectFn, highlightFn, halo } from './helpers';
@@ -27,12 +36,11 @@ export function renderFrame(data: Data[], store: Store, renderOptions: RenderOpt
     defs,
     lastDate,
   } = renderOptions;
-  const dates = store.getState().ticker.dates;
-  const { showGroups } = store.getState().options;
+  const storeState = store.getState();
+  const dates = selectTickDates(storeState);
+  const showGroups = selectOptShowGroups(storeState);
 
-  if (!x) {
-    return;
-  }
+  if (!x) return;
 
   const {
     tickDuration,
@@ -44,17 +52,19 @@ export function renderFrame(data: Data[], store: Store, renderOptions: RenderOpt
     fixedScale,
     fixedOrder,
     labelsPosition,
-  } = store.getState().options;
+    topN: topNOpt,
+  } = selectOptions(storeState);
 
-  const topN = fixedOrder.length > 0 ? fixedOrder.length : store.getState().options.topN;
-  const currentDate = store.getState().ticker.currentDate;
+  const topN = fixedOrder.length > 0 ? fixedOrder.length : topNOpt;
+  const currentDate = selectTickCurrentDate(storeState);
   const CompleteDateSlice = getDateSlice(currentDate, data, store);
   const dateSlice = CompleteDateSlice.slice(0, topN);
+  const groupFilter = selectDataGroupFilter(storeState);
 
   if (showGroups) {
     svg
       .selectAll('.legend-wrapper')
-      .style('opacity', (d: string) => (store.getState().data.groupFilter.includes(d) ? 0.3 : 1));
+      .style('opacity', (d: string) => (groupFilter.includes(d) ? 0.3 : 1));
   }
 
   if (!fixedScale) {
@@ -72,11 +82,13 @@ export function renderFrame(data: Data[], store: Store, renderOptions: RenderOpt
     .selectAll('.bar')
     .data(dateSlice, (d: Data) => d.name);
 
+  const dataSelected = selectDataSelected(storeState);
+
   bars
     .enter()
     .append('rect')
     .attr('class', (d: Data) => 'bar ' + safeName(d.name))
-    .classed('selected', (d: Data) => store.getState().data.selected.includes(d.name))
+    .classed('selected', (d: Data) => dataSelected.includes(d.name))
     .attr('x', x(0) + 1)
     .attr('width', barWidth)
     .attr('y', () => y(topN + 1) + marginBottom + 5)
@@ -183,7 +195,7 @@ export function renderFrame(data: Data[], store: Store, renderOptions: RenderOpt
     .attr('y', () => y(topN + 1) + marginBottom + 5)
     .remove();
 
-  if (store.getState().options.showIcons) {
+  if (selectOptShowIcons(store.getState())) {
     const iconPatterns = defs.selectAll('.svgpattern').data(dateSlice, (d: Data) => d.name);
 
     iconPatterns
